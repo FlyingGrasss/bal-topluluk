@@ -1,0 +1,39 @@
+name: bal-topluluk
+
+services:
+  app:
+    build:
+      context: .
+    image: bal-topluluk:latest
+    environment:
+      NODE_ENV: production
+      API_PORT: "4600"
+      # Next.js rewrites /api/* to this process inside the same container.
+      API_HOST: "127.0.0.1"
+      DB_PATH: "/app/data/bal-topluluk.db"
+      # Required. At least 16 characters; use a random value.
+      ADMIN_TOKEN: "${ADMIN_TOKEN:?Set ADMIN_TOKEN (min 16 characters) in .env}"
+      # Next is the trusted local proxy and forwards the real client IP.
+      TRUST_PROXY: "${TRUST_PROXY:-1}"
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+# Usage:
+#   cp .env.example .env
+#   # set ADMIN_TOKEN to a random value of at least 16 characters
+#   docker compose up -d --build
+#   docker compose logs -f app
+#
+# The API stays on loopback inside the container; only HOST_PORT is published.
+# On Linux, make the bind mount writable by UID 1000 before the first start:
+#   mkdir -p data && sudo chown -R 1000:1000 data
